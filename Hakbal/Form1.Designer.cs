@@ -47,6 +47,8 @@
             CompileResultsButton = new Button();
             ErrorMessageLabel = new Label();
             ErrorMessageTextBox = new TextBox();
+            ClearErrorMessageButton = new Button();
+            ClearAllButton = new Button();
             SuspendLayout();
             // 
             // ScannerNameLable
@@ -193,7 +195,7 @@
             // 
             CompileResultsButton.Location = new Point(12, 342);
             CompileResultsButton.Name = "CompileResultsButton";
-            CompileResultsButton.Size = new Size(572, 96);
+            CompileResultsButton.Size = new Size(462, 96);
             CompileResultsButton.TabIndex = 16;
             CompileResultsButton.Text = "Compile SummaryGraphData";
             CompileResultsButton.UseVisualStyleBackColor = true;
@@ -216,14 +218,36 @@
             ErrorMessageTextBox.Multiline = true;
             ErrorMessageTextBox.Name = "ErrorMessageTextBox";
             ErrorMessageTextBox.ReadOnly = true;
-            ErrorMessageTextBox.Size = new Size(572, 65);
+            ErrorMessageTextBox.Size = new Size(462, 65);
             ErrorMessageTextBox.TabIndex = 18;
+            // 
+            // ClearErrorMessageButton
+            // 
+            ClearErrorMessageButton.Location = new Point(480, 27);
+            ClearErrorMessageButton.Name = "ClearErrorMessageButton";
+            ClearErrorMessageButton.Size = new Size(101, 65);
+            ClearErrorMessageButton.TabIndex = 19;
+            ClearErrorMessageButton.Text = "Clear Error Message";
+            ClearErrorMessageButton.UseVisualStyleBackColor = true;
+            ClearErrorMessageButton.Click += ClearErrorMessageButton_Click;
+            // 
+            // ClearAllButton
+            // 
+            ClearAllButton.Location = new Point(480, 342);
+            ClearAllButton.Name = "ClearAllButton";
+            ClearAllButton.Size = new Size(101, 96);
+            ClearAllButton.TabIndex = 20;
+            ClearAllButton.Text = "Clear All";
+            ClearAllButton.UseVisualStyleBackColor = true;
+            ClearAllButton.Click += ClearAllButton_Click;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(593, 450);
+            Controls.Add(ClearAllButton);
+            Controls.Add(ClearErrorMessageButton);
             Controls.Add(ErrorMessageTextBox);
             Controls.Add(ErrorMessageLabel);
             Controls.Add(ScannerNameTextBox);
@@ -270,5 +294,7 @@
         private Button CompileResultsButton;
         private Label ErrorMessageLabel;
         private TextBox ErrorMessageTextBox;
+        private Button ClearErrorMessageButton;
+        private Button ClearAllButton;
     }
 }
