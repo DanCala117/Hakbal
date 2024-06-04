@@ -1,24 +1,24 @@
-using System;
-using System.IO;
-using System.Diagnostics;
-using System.Windows.Forms;
-using System.Linq;
+using Microsoft.VisualBasic.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using OfficeOpenXml.Drawing.Controls;
-using System.Linq.Expressions;
-using OfficeOpenXml.Drawing.Chart;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Hakbal
 {
     public partial class Form1 : Form
     {
         //Create an instance of the TargetLog class
-        TargetLog TLog = new TargetLog();
+        //TO BE DELETED
+        //TargetLog TLog = new TargetLog();
 
-        //Log file to gather decode times
-        string SelectedLog = "blank";
+        //list to contain each instance of the target log class
+        //needed to select multiple files
+        List<TargetLog> DataSet = new List<TargetLog>();
 
+        /// <summary>
+        /// loads GUI
+        /// </summary>
         public Form1()
         {
             InitializeComponent();
@@ -27,92 +27,30 @@ namespace Hakbal
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
         }
 
+        #region GUI_Elements
         /// <summary>
-        /// Sets the scanners name for the compiled log
+        /// What happens when the form initiallylaods
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void SetScannerNameButton_Click(object sender, EventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            try
-            {
-                TLog.ScannerName = ScannerNameTextBox.Text;
-
-                if (ScannerNameTextBox.Text == "")
-                {
-                    ErrorMessageTextBox.Text = "Please Enter Your Scanner's Name.";
-                }
-            }
-            catch (Exception)
-            {
-                ErrorMessageTextBox.Text = "Error Setting Scanner's Name.";
-            }
-        }
-
-        /// <summary>
-        /// Sets the scanners make for the compiled log
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void SetScannerMakeButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                TLog.ScannerMake = ScannerMakeTextBox.Text;
-
-                if (ScannerMakeTextBox.Text == "")
-                {
-                    ErrorMessageTextBox.Text = "Please Enter Your Scanner's Make.";
-                }
-            }
-            catch (Exception)
-            {
-                ErrorMessageTextBox.Text = "Error Setting Scanner's Make.";
-            }
-        }
-
-        /// <summary>
-        /// Sets the scanners serial number for the compiled log
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void SetScannerSerialNumberButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                TLog.ScannerSerialNumber = ScannerSerialNumberTextBox.Text;
-
-                if (ScannerSerialNumberTextBox.Text == "")
-                {
-                    ErrorMessageTextBox.Text = "Please Enter Your Scanner's Serial Number.";
-                }
-            }
-            catch (Exception)
-            {
-                ErrorMessageTextBox.Text = "Error Setting Scanner's Serial Number.";
-            }
-        }
-
-        /// <summary>
-        /// Sets the barcode samples name for the compiled log
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void SetBarcodeSampleNameButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                TLog.BarcodeSampleName = BarcodeSampleNameTextBox.Text;
-
-                if (BarcodeSampleNameTextBox.Text == "")
-                {
-                    ErrorMessageTextBox.Text = "Please Enter Your Barcode Sample's Name.";
-                }
-            }
-            catch (Exception)
-            {
-                ErrorMessageTextBox.Text = "Error Setting Barcode Sample's Name.";
-            }
+            //GUI ToolTips
+            System.Windows.Forms.ToolTip MyToolTip = new System.Windows.Forms.ToolTip();
+            MyToolTip.AutoPopDelay = 5000;
+            MyToolTip.InitialDelay = 500;
+            MyToolTip.ReshowDelay = 500;
+            MyToolTip.ShowAlways = true;
+            MyToolTip.SetToolTip(this.ScannerNameTextBox, "Example: \"DS8178_001-R00_Defaults\".");
+            MyToolTip.SetToolTip(this.ScannerMakeTextBox, "Example: \"Zebra\".");
+            MyToolTip.SetToolTip(this.ScannerSerialNumberTextBox, "Example: \"01234567890\".");
+            MyToolTip.SetToolTip(this.BarcodeSampleNameTextBox, "Example: \"Paper_QR10m\".");
+            MyToolTip.SetToolTip(this.LogFilePathTextBox, "Please select the correct file path.");
+            MyToolTip.SetToolTip(this.AddLogToDataSetButton, "Adds the data above to the data set to compile. Please add one or more logs.");
+            MyToolTip.SetToolTip(this.ClearAllButton, "Clears all of the data above.");
+            MyToolTip.SetToolTip(this.DataSetListBox, "List of all logs to be compiled.");
+            MyToolTip.SetToolTip(this.DeleteLastAddedButton, "Deletes only the last added log from the data set.");
+            MyToolTip.SetToolTip(this.CompileResultsButton, "This will create a folder on your desktop named \"Hakbal_Files\" and save the compiled results there.");
         }
 
         /// <summary>
@@ -122,23 +60,26 @@ namespace Hakbal
         /// <param name="e"></param>
         private void BrowseFilesButton_Click(object sender, EventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            ofd.Filter = "log files (*.log)|*.log|All files (*.*)|*.*";
-            ofd.Multiselect = false;
+            //dialog box parameters
+            OpenFileDialog LogSelectDialog = new OpenFileDialog();
+            LogSelectDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            LogSelectDialog.Filter = "log files (*.log)|*.log|All files (*.*)|*.*";
+            LogSelectDialog.Multiselect = false;
+            LogSelectDialog.Title = "Log Selection";
 
+            DialogResult SelectedFiles = LogSelectDialog.ShowDialog();
+
+            //gets chosen log
             try
             {
-                if (ofd.ShowDialog() == DialogResult.OK)
+                if (SelectedFiles == DialogResult.OK)
                 {
-                    SelectedLog = ofd.FileName;
-                    LogFilePathTextBox.Text = ofd.FileName;
+                    LogFilePathTextBox.Text = string.Join(Environment.NewLine, LogSelectDialog.FileNames);
                 }
                 else
                 {
-                    SelectedLog = "N/A";
-
-                    ErrorMessageTextBox.Text = "The File You Tried to Find Does Not Exists In The Selected Directory.";
+                    //only if the dialog box is opened and no log is selected
+                    ErrorMessageTextBox.Text = "You Closed The Dialog Box Without Selecting Any Files.";
                 }
             }
             catch (Exception)
@@ -148,36 +89,38 @@ namespace Hakbal
         }
 
         /// <summary>
-        /// Sets the log path to compile
+        /// Adds most recent log to the list of logs to compile
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void SetLogPathButton_Click(object sender, EventArgs e)
+        private void AddLogToDataSetButton_Click(object sender, EventArgs e)
         {
             try
             {
+                //gets user givin data and adds it to the data set to compile
+                TargetLog TLog = new TargetLog();
+
+                TLog.ScannerName = ScannerNameTextBox.Text;
+                TLog.ScannerMake = ScannerMakeTextBox.Text;
+                TLog.ScannerSerialNumber = ScannerSerialNumberTextBox.Text;
+                TLog.BarcodeSampleName = BarcodeSampleNameTextBox.Text;
                 TLog.LogFilePath = LogFilePathTextBox.Text;
+
+                DataSet.Add(TLog);
+
+                //prints data set to text box
+                if (TLog.ToString() != "Log: , , ")
+                {
+                    DataSetListBox.Items.Add(TLog.ToString());
+                }
+                else
+                {
+                    ErrorMessageTextBox.Text = "No data has been entered.";
+                }
             }
             catch (Exception)
             {
-                ErrorMessageTextBox.Text = "Error Setting Log File.";
-            }
-        }
-
-        /// <summary>
-        /// Clears the error message text box when clicked
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ClearErrorMessageButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                ErrorMessageTextBox.Text = String.Empty;
-            }
-            catch
-            {
-
+                ErrorMessageTextBox.Text = "There was an issue adding the data to the data set.";
             }
         }
 
@@ -190,16 +133,54 @@ namespace Hakbal
         {
             try
             {
+                //emptys the text boxes
                 ScannerNameTextBox.Text = String.Empty;
                 ScannerMakeTextBox.Text = String.Empty;
                 ScannerSerialNumberTextBox.Text = String.Empty;
                 BarcodeSampleNameTextBox.Text = String.Empty;
                 LogFilePathTextBox.Text = String.Empty;
             }
-            catch
+            catch (Exception)
             {
                 ErrorMessageTextBox.Text = "There was an issue clearing all text boxes.";
             }
+        }
+
+        /// <summary>
+        /// Deletes the last entered log from the data set on button click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void DeleteLastAddedButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                //gets rid of the last entry in the data set
+                DataSet.RemoveAt(DataSet.Count - 1);
+
+                //prints updated data set
+                DataSetListBox.Items.Clear();
+                foreach (object log in DataSet)
+                {
+                    DataSetListBox.Items.Add(log.ToString());
+                }
+            }
+            catch (Exception)
+            {
+
+                ErrorMessageTextBox.Text = "There are no more entrys to delete.";
+            }
+        }
+
+        /// <summary>
+        /// Clears the error message text box when clicked
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ClearErrorMessageButton_Click(object sender, EventArgs e)
+        {
+            //emptys text box
+            ErrorMessageTextBox.Text = String.Empty;
         }
 
         /// <summary>
@@ -213,349 +194,377 @@ namespace Hakbal
             // according to the Polyform Noncommercial license:
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            //Excell Spreadsheet Creation
             using (var excelPackage = new ExcelPackage())
             {
-                var RawResultsSheet = excelPackage.Workbook.Worksheets.Add(TLog.ScannerName + "_" + TLog.BarcodeSampleName);
-
-                var ScorecardsSheet = excelPackage.Workbook.Worksheets.Add("Scorecard");
-
-                //Prints Device + Barcode information from user for Raw SummaryGraphData Tab
+                //creates the Raw Results tab for each log
                 try
                 {
-                    RawResultsSheet.Cells["A1"].Value = "Scanner Name: " + TLog.ScannerName;
-                    RawResultsSheet.Cells["A1"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    RawResultsSheet.Cells["A1"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
-
-                    RawResultsSheet.Cells["A2"].Value = "Scanner Make: " + TLog.ScannerMake;
-                    RawResultsSheet.Cells["A2"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    RawResultsSheet.Cells["A2"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
-
-                    RawResultsSheet.Cells["A3"].Value = "Scanner Serial Number: " + TLog.ScannerSerialNumber;
-                    RawResultsSheet.Cells["A3"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    RawResultsSheet.Cells["A3"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
-
-                    RawResultsSheet.Cells["A4"].Value = "Barcode Sample Name: " + TLog.BarcodeSampleName;
-                    RawResultsSheet.Cells["A4"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    RawResultsSheet.Cells["A4"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
-
-                    RawResultsSheet.Cells["A1:A4"].AutoFitColumns();
-                }
-                catch (Exception)
-                {
-                    ErrorMessageTextBox.Text = "Error Printing Device + Barcode Summary In The Spreadsheet. Did You Set All Device Information Correctly?";
-                }
-
-                //Prints table headers for Raw SummaryGraphData Tab
-                try
-                {
-                    var LogFileNameGraphHeader = RawResultsSheet.Cells["B5:M5"];
-                    LogFileNameGraphHeader.Merge = true;
-                    LogFileNameGraphHeader.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    LogFileNameGraphHeader.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                    //RawResultsSheet.Cells["B5"].Value = LogFilePathTextBox.Text.ToString();
-                    RawResultsSheet.Cells["B5"].Value = GetFileName(LogFilePathTextBox.Text.ToString());
-
-                    RawResultsSheet.Cells["B6"].Value = "Distance (In)";
-                    RawResultsSheet.Cells["B6"].Style.Font.Bold = true;
-                    RawResultsSheet.Cells["B6"].AutoFitColumns();
-
-                    RawResultsSheet.Cells["C6"].Value = "Decode Times (MS)";
-                    RawResultsSheet.Cells["C6"].Style.Font.Bold = true;
-
-                    RawResultsSheet.Cells["M6"].Value = "Average (MS)";
-                    RawResultsSheet.Cells["M6"].Style.Font.Bold = true;
-                    RawResultsSheet.Cells["M6"].AutoFitColumns();
-
-                    RawResultsSheet.Cells["B6:M6"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    RawResultsSheet.Cells["B6:M6"].Style.Fill.BackgroundColor.SetColor(Color.Gray);
-                }
-                catch (Exception)
-                {
-                    ErrorMessageTextBox.Text = "Error Printing Table Headers In The Spreadsheet.";
-                }
-
-                //Print distances + decode times from log to the Raw SummaryGraphData Tab
-                try
-                {
-                    //Calls functions to get what we need from the log
-                    TLog.SummaryGraphData = GetDecodeTimesAndAverages(TLog.LogFilePath);
-                    TLog.DecodeTimes = Flatten2DArray(GetDecodeTimesOnly(TLog.SummaryGraphData));
-                    TLog.SnappyData = GetSnappyTimes(GetDecodeTimesAndAverages(TLog.LogFilePath));
-                    TLog.SnappyDecodeTimes = Flatten2DArray(GetDecodeTimesOnly(TLog.SnappyData));//test
-
-                    int Rows = TLog.SummaryGraphData.GetLength(0);
-                    int Cols = TLog.SummaryGraphData.GetLength(1);
-
-                    for (int i = 0; i < Rows; i++)
+                    foreach (TargetLog log in DataSet)
                     {
-                        for (int j = 0; j < Cols; j++)
+                        //creates the tab for each log in the data set
+                        var RawResultsSheet = excelPackage.Workbook.Worksheets.Add("RawResults_" + log.ScannerName + "_" + log.BarcodeSampleName);
+
+                        //Tab header with scanner + barcode info 
+                        RawResultsSheet.Cells["A1"].Value = "Scanner Name: " + log.ScannerName;
+                        RawResultsSheet.Cells["A1"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["A1"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
+
+                        RawResultsSheet.Cells["A2"].Value = "Scanner Make: " + log.ScannerMake;
+                        RawResultsSheet.Cells["A2"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["A2"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
+
+                        RawResultsSheet.Cells["A3"].Value = "Scanner Serial Number: " + log.ScannerSerialNumber;
+                        RawResultsSheet.Cells["A3"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["A3"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
+
+                        RawResultsSheet.Cells["A4"].Value = "Barcode Sample Name: " + log.BarcodeSampleName;
+                        RawResultsSheet.Cells["A4"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["A4"].Style.Fill.BackgroundColor.SetColor(Color.Orange);
+
+                        RawResultsSheet.Cells["A1:A4"].AutoFitColumns();
+
+                        //raw data table header
+                        var LogFileNameGraphHeader = RawResultsSheet.Cells["B5:M5"];
+                        LogFileNameGraphHeader.Merge = true;
+                        LogFileNameGraphHeader.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        LogFileNameGraphHeader.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                        RawResultsSheet.Cells["B5"].Value = GetFileName(LogFilePathTextBox.Text.ToString()); //TODO FIX THIS LINE!!!!!!!!!!!!!!!!!!!!!!!!!
+
+                        RawResultsSheet.Cells["B6"].Value = "Distance (In)";
+                        RawResultsSheet.Cells["B6"].Style.Font.Bold = true;
+                        RawResultsSheet.Cells["B6"].AutoFitColumns();
+
+                        RawResultsSheet.Cells["C6"].Value = "Decode Times (MS)";
+                        RawResultsSheet.Cells["C6"].Style.Font.Bold = true;
+
+                        RawResultsSheet.Cells["M6"].Value = "Average (MS)";
+                        RawResultsSheet.Cells["M6"].Style.Font.Bold = true;
+                        RawResultsSheet.Cells["M6"].AutoFitColumns();
+
+                        RawResultsSheet.Cells["B6:M6"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["B6:M6"].Style.Fill.BackgroundColor.SetColor(Color.Gray);
+
+                        log.SummaryGraphData = GetDecodeTimesAndAverages(log.LogFilePath);
+                        log.DecodeTimes = Flatten2DArray(GetDecodeTimesOnly(log.SummaryGraphData));
+                        log.SnappyData = GetSnappyTimes(GetDecodeTimesAndAverages(log.LogFilePath));
+                        log.SnappyDecodeTimes = Flatten2DArray(GetDecodeTimesOnly(log.SnappyData));//AllLogPaths
+
+                        int Rows = log.SummaryGraphData.GetLength(0);
+                        int Cols = log.SummaryGraphData.GetLength(1);
+
+                        for (int i = 0; i < Rows; i++)
                         {
-                            //RawResultsSheet.Cells[i + 7, j + 2].Value = String.Format("{0:N2}", TLog.SummaryGraphData[i, j]);
-                            RawResultsSheet.Cells[i + 7, j + 2].Value = TLog.SummaryGraphData[i, j];
-                            RawResultsSheet.Cells[i + 7, j + 2].Style.Numberformat.Format = "0";
+                            for (int j = 0; j < Cols; j++)
+                            {
+                                //RawResultsSheet.Cells[i + 7, j + 2].Value = String.Format("{0:N2}", TLog.SummaryGraphData[i, j]);
+                                RawResultsSheet.Cells[i + 7, j + 2].Value = log.SummaryGraphData[i, j];
+                                RawResultsSheet.Cells[i + 7, j + 2].Style.Numberformat.Format = "0";
+                            }
                         }
+
+                        //Formatting for the graph data
+                        RawResultsSheet.Cells["B:B"].Style.Numberformat.Format = "0.00";
+                        RawResultsSheet.Cells["M:M"].Style.Numberformat.Format = "0.00";
+
+                        //
+                        var LineGraph = RawResultsSheet.Drawings.AddChart("Results", OfficeOpenXml.Drawing.Chart.eChartType.LineMarkersStacked);
+
+                        //From Row, From Col - To Row, To Col
+                        var YRange = RawResultsSheet.Cells[7, 2, GetDistancesOnly(log.SummaryGraphData).Length + 6, 2];
+                        var XRange = RawResultsSheet.Cells[7, 13, GetDistanceAveragesOnly(log.SummaryGraphData).Length + 6, 13];
+                        var Series = LineGraph.Series.Add(XRange, YRange);
+
+                        LineGraph.Title.Text = log.ScannerName + "_" + log.BarcodeSampleName + "_Average_Results";
+                        LineGraph.XAxis.Title.Text = "Distance (In)";
+                        LineGraph.YAxis.Title.Text = "Decode Time (MS)";
+                        LineGraph.XAxis.MajorUnit = .1;
+                        LineGraph.SetPosition(4, 10, 13, 10);
+                        LineGraph.SetSize(1000, 600);
                     }
-
-                    //Formatting for the graph data
-                    RawResultsSheet.Cells["B:B"].Style.Numberformat.Format = "0.00";
-                    RawResultsSheet.Cells["M:M"].Style.Numberformat.Format = "0.00";
                 }
                 catch (Exception)
                 {
-                    ErrorMessageTextBox.Text = "Error Printing Out Summary Of Decode Times In The Spreadsheet. Did You Select A Proper Log File?";
+
+                    ErrorMessageTextBox.Text = "There was an error creating the raw data tab. Did you select a propper log file to compile? Did you select the same log twice?";
                 }
 
-                //Create a line graph in the Raw SummaryGraphData Tab
+                //creates the scorecard summary tab for each log
                 try
                 {
-                    var LineGraph = RawResultsSheet.Drawings.AddChart("Results", OfficeOpenXml.Drawing.Chart.eChartType.LineMarkersStacked);
+                    foreach (TargetLog log in DataSet)
+                    {
+                        var ScorecardSheet = excelPackage.Workbook.Worksheets.Add("SC_" + log.ScannerName + "_" + log.BarcodeSampleName);
 
-                    //From Row, From Col - To Row, To Col
-                    var YRange = RawResultsSheet.Cells[7, 2, GetDistancesOnly(TLog.SummaryGraphData).Length + 6, 2];
-                    var XRange = RawResultsSheet.Cells[7, 13, GetDistanceAveragesOnly(TLog.SummaryGraphData).Length + 6, 13];
-                    var Series = LineGraph.Series.Add(XRange, YRange);
+                        //scorecard header styling
+                        ScorecardSheet.Cells["B1"].Value = "Decode Range (In):";
+                        ScorecardSheet.Cells["B1"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C1"].Value = "The largest range of distances that the scanner decoded at with no gap in decode. If the scanner decoded outside of this range, it is NOT included.";
+                        ScorecardSheet.Cells["C1"].Style.Font.Bold = true;
 
-                    LineGraph.Title.Text = TLog.ScannerName + "_" + TLog.BarcodeSampleName + "_Average_Results";
-                    LineGraph.XAxis.Title.Text = "Distance (In)";
-                    LineGraph.YAxis.Title.Text = "Decode Time (MS)";
-                    LineGraph.XAxis.MajorUnit = .1;
-                    LineGraph.SetPosition(4, 10, 13, 10);
-                    LineGraph.SetSize(1000, 600);
+                        ScorecardSheet.Cells["B2"].Value = "Minimum Distance (In):";
+                        ScorecardSheet.Cells["B2"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C2"].Value = "The minimum distance of the Decode Range.";
+                        ScorecardSheet.Cells["C2"].Style.Font.Bold = true;
 
+                        ScorecardSheet.Cells["B3"].Value = "Maximum Distance (In):";
+                        ScorecardSheet.Cells["B3"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C3"].Value = "The maximum distance of the Decode Range.";
+                        ScorecardSheet.Cells["C3"].Style.Font.Bold = true;
+
+                        ScorecardSheet.Cells["B4"].Value = "Total Average (MS):";
+                        ScorecardSheet.Cells["B4"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C4"].Value = "The average decode time of the decode range.";
+                        ScorecardSheet.Cells["C4"].Style.Font.Bold = true;
+
+                        /*Commenting out becasue this feature is no longer needed
+                        ScorecardSheet.Cells[""].Value = "Total Average (90%) (MS):";
+                        ScorecardSheet.Cells[""].Style.Font.Bold = true;
+                        ScorecardSheet.Cells[""].Value = "The average decode time of the first 90% of the decode range.";
+                        ScorecardSheet.Cells[""].Style.Font.Bold = true;*/
+
+                        ScorecardSheet.Cells["B5"].Value = "Standard Deviation (MS):";
+                        ScorecardSheet.Cells["B5"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C5"].Value = "The standard deviation of the decode range.";
+                        ScorecardSheet.Cells["C5"].Style.Font.Bold = true;
+
+                        ScorecardSheet.Cells["B6"].Value = "Highest Decode Time (MS)";
+                        ScorecardSheet.Cells["B6"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C6"].Value = "The highest decode time from the Decode Range.";
+                        ScorecardSheet.Cells["C6"].Style.Font.Bold = true;
+
+                        ScorecardSheet.Cells["B7"].Value = "Lowest Decode Time (MS):";
+                        ScorecardSheet.Cells["B7"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C7"].Value = "The lowest decode time from the Deocde Range.";
+                        ScorecardSheet.Cells["C7"].Style.Font.Bold = true;
+
+                        ScorecardSheet.Cells["B9"].Value = "Total Range:";
+                        ScorecardSheet.Cells["B9"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C9"].Value = "Statistics for the entire range of decodes consisting of any scans as long as there was a decode of any length.";
+                        ScorecardSheet.Cells["C9"].Style.Font.Bold = true;
+
+                        ScorecardSheet.Cells["B10"].Value = "Snappy Range:";
+                        ScorecardSheet.Cells["B10"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C10"].Value = "Statistics for only the \"snappiest\" range where decode times are 500ms and under.";
+                        ScorecardSheet.Cells["C10"].Style.Font.Bold = true;
+
+                        //prints sample name
+                        ScorecardSheet.Cells["C13"].Value = log.BarcodeSampleName;
+                        ScorecardSheet.Cells["C13"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C13"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C13"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        ScorecardSheet.Cells["C13"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#FFF2CC"));
+
+                        //prints scanner name
+                        ScorecardSheet.Cells["C14"].Value = log.ScannerMake + "_" + log.ScannerName;
+                        ScorecardSheet.Cells["C14"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C14"].Style.Border.Top.Style = ExcelBorderStyle.Thick;
+                        ScorecardSheet.Cells["C14"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+                        ScorecardSheet.Cells["C14"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C14"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        ScorecardSheet.Cells["C14"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#DDEBF7"));
+
+                        //Notes field for the user to enter in any relevant notes about the scanner
+                        ScorecardSheet.Cells["C15"].Value = "Notes:";
+                        ScorecardSheet.Cells["C15"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C15"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+                        ScorecardSheet.Cells["C15"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C15"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        ScorecardSheet.Cells["C15"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#C5D9F1"));
+                        ScorecardSheet.Row(16).Height = 75;
+                        ScorecardSheet.Cells["C16"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+                        ScorecardSheet.Cells["C16"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C16"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        ScorecardSheet.Cells["C16"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#C5D9F1"));
+
+                        //worksheet styling
+                        var TotalRangeTag = ScorecardSheet.Cells["A17:A23"];
+                        TotalRangeTag.Merge = true;
+                        TotalRangeTag.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        TotalRangeTag.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                        ScorecardSheet.Cells["A17"].Value = "Total Range";
+                        ScorecardSheet.Cells["A17"].Style.TextRotation = 45;
+
+                        ScorecardSheet.Column(1).Width = 14;
+                        ScorecardSheet.Column(2).Width = 30;
+                        ScorecardSheet.Column(3).Width = 35;
+
+                        ScorecardSheet.Cells["C17:C30"].Style.Numberformat.Format = "0.00";
+
+                        var SnappyRangeTag = ScorecardSheet.Cells["A24:A30"];
+                        SnappyRangeTag.Merge = true;
+                        SnappyRangeTag.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        SnappyRangeTag.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                        ScorecardSheet.Cells["A24"].Value = "Snappy Range";
+                        ScorecardSheet.Cells["A24"].Style.TextRotation = 45;
+
+                        //total range results
+                        ScorecardSheet.Cells["B17"].Value = "Minimum Distance (In):";
+                        ScorecardSheet.Cells["B17"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C17"].Value = CalculateClosestRange(log.SummaryGraphData);
+                        ScorecardSheet.Cells["C17"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C17"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B18"].Value = "Maximum Distance (In):";
+                        ScorecardSheet.Cells["B18"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C18"].Value = CalculateFarthestRange(log.SummaryGraphData);
+                        ScorecardSheet.Cells["C18"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C18"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B19"].Value = "Decode Range (In):";
+                        ScorecardSheet.Cells["B19"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C19"].Value = CalculateDecodeRange(log.SummaryGraphData);
+                        ScorecardSheet.Cells["C19"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C19"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B20"].Value = "Total Average (MS):";
+                        ScorecardSheet.Cells["B20"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C20"].Value = CalculateAverageDecodeTime(log.SummaryGraphData);
+                        ScorecardSheet.Cells["C20"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C20"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        /*Commenting out becasue this feature is no longer needed
+                        ScorecardSheet.Cells[""].Value = "Total Average (90%) (MS):";
+                        ScorecardSheet.Cells[""].Style.Font.Bold = true;
+                        ScorecardSheet.Cells[""].Value = CalculateNinetyPercentAverageDecodeTime(log.SummaryGraphData);
+                        ScorecardSheet.Cells[""].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells[""].Style.Border.Right.Style = ExcelBorderStyle.Thick;*/
+
+                        ScorecardSheet.Cells["B21"].Value = "Standard Deviation (MS):";
+                        ScorecardSheet.Cells["B21"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C21"].Value = CalculateStandardDeviationDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C21"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C21"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B22"].Value = "Highest Decode Time (MS)";
+                        ScorecardSheet.Cells["B22"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C22"].Value = CalculateHighestDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C22"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C22"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B23"].Value = "Lowest Decode Time (MS):";
+                        ScorecardSheet.Cells["B23"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C23"].Value = CalculateLowestDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C23"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C23"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        //styling for total range results
+                        var TotalRangeResults = ScorecardSheet.Cells["A17:C23"];
+                        TotalRangeResults.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        TotalRangeResults.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#F2F2F2"));
+
+                        //snappy range results
+                        ScorecardSheet.Cells["B24"].Value = "Snappy Minimum Distance (In):";
+                        ScorecardSheet.Cells["B24"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C24"].Value = CalculateClosestRange(log.SnappyData);
+                        ScorecardSheet.Cells["C24"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C24"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B25"].Value = "Snappy Maximum Distance (In):";
+                        ScorecardSheet.Cells["B25"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C25"].Value = CalculateFarthestRange(log.SnappyData);
+                        ScorecardSheet.Cells["C25"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C25"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B26"].Value = "Snappy Decode Range (In):";
+                        ScorecardSheet.Cells["B26"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C26"].Value = CalculateDecodeRange(log.SnappyData);
+                        ScorecardSheet.Cells["C26"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C26"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B27"].Value = "Snappy Total Average (MS):";
+                        ScorecardSheet.Cells["B27"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C27"].Value = CalculateAverageDecodeTime(log.SnappyData);
+                        ScorecardSheet.Cells["C27"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C27"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        /*Commenting out becasue this feature is no longer needed
+                        ScorecardSheet.Cells[""].Value = "Snappy Total Average (90%) (MS):";
+                        ScorecardSheet.Cells[""].Style.Font.Bold = true;
+                        ScorecardSheet.Cells[""].Value = CalculateNinetyPercentAverageDecodeTime(og.SummaryGraphData);
+                        ScorecardSheet.Cells[""].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells[""].Style.Border.Right.Style = ExcelBorderStyle.Thick;*/
+
+                        ScorecardSheet.Cells["B28"].Value = "Snappy Standard Deviation (MS):";
+                        ScorecardSheet.Cells["B28"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C28"].Value = CalculateStandardDeviationDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C28"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C28"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B29"].Value = "Snappy Highest Decode Time (MS)";
+                        ScorecardSheet.Cells["B29"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C29"].Value = CalculateHighestDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C29"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C29"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        ScorecardSheet.Cells["B30"].Value = "Lowest Decode Time (MS):";
+                        ScorecardSheet.Cells["B30"].Style.Font.Bold = true;
+                        ScorecardSheet.Cells["C30"].Value = CalculateLowestDecodeTime(log.DecodeTimes);
+                        ScorecardSheet.Cells["C30"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        ScorecardSheet.Cells["C30"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
+
+                        //styling for snappy range results
+                        var SnappyRangeResults = ScorecardSheet.Cells["A24:C30"];
+                        SnappyRangeResults.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        SnappyRangeResults.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9D9D9"));
+                    }
                 }
                 catch (Exception)
                 {
-                    ErrorMessageTextBox.Text = "Error Creating The Line Graph In The Spreadsheet. Did You Select A Proper Log File?";
+
+                    ErrorMessageTextBox.Text = "There was an error creating the scorecard tab. Did you select a propper log file to compile? Did you select the same log twice?";
                 }
 
-                //Print calculations from the log file to the Scorecard Tab
+                //create the spreadsheet and save it to a new folder on the users desktop
                 try
                 {
-                    //scorecard header styling
-                    ScorecardsSheet.Cells["B1"].Value = "Decode Range (In):";
-                    ScorecardsSheet.Cells["B1"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C1"].Value = "The largest range of distances that the scanner decoded at with no gap in decode. If the scanner decoded outside of this range, it is NOT included.";
-                    ScorecardsSheet.Cells["C1"].Style.Font.Bold = true;
+                    if (!DataSet.Any())
+                    {
+                        //checks if the dataset is empty before compiling
+                        ErrorMessageTextBox.Text = "You have not selected any valid log files to compile.";
+                    }
+                    else
+                    {
+                        // Create a new folder on the desktop
+                        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                        string SaveFolder = Path.Combine(desktopPath, "Hakbal_Files");
+                        if (!Directory.Exists(SaveFolder))
+                        {
+                            Directory.CreateDirectory(SaveFolder);
+                        }
 
-                    ScorecardsSheet.Cells["B2"].Value = "Minimum Distance (In):";
-                    ScorecardsSheet.Cells["B2"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C2"].Value = "The minimum distance of the Decode Range.";
-                    ScorecardsSheet.Cells["C2"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B3"].Value = "Maximum Distance (In):";
-                    ScorecardsSheet.Cells["B3"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C3"].Value = "The maximum distance of the Decode Range.";
-                    ScorecardsSheet.Cells["C3"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B4"].Value = "Total Average (MS):";
-                    ScorecardsSheet.Cells["B4"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C4"].Value = "The average decode time of the decode range.";
-                    ScorecardsSheet.Cells["C4"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B5"].Value = "Total Average (90%) (MS):";
-                    ScorecardsSheet.Cells["B5"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C5"].Value = "The average decode time of the first 90% of the decode range.";
-                    ScorecardsSheet.Cells["C5"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B6"].Value = "Standard Deviation (MS):";
-                    ScorecardsSheet.Cells["B6"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C6"].Value = "The standard deviation of the decode range.";
-                    ScorecardsSheet.Cells["C6"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B7"].Value = "Highest Decode Time (MS)";
-                    ScorecardsSheet.Cells["B7"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C7"].Value = "The highest decode time from the Decode Range.";
-                    ScorecardsSheet.Cells["C7"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B8"].Value = "Lowest Decode Time (MS):";
-                    ScorecardsSheet.Cells["B8"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C8"].Value = "The lowest decode time from the Deocde Range.";
-                    ScorecardsSheet.Cells["C8"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B10"].Value = "Total Range:";
-                    ScorecardsSheet.Cells["B10"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C10"].Value = "Statistics for the entire range of decodes consisting of any scans as long as there was a decode of any length.";
-                    ScorecardsSheet.Cells["C10"].Style.Font.Bold = true;
-
-                    ScorecardsSheet.Cells["B11"].Value = "Snappy Range:";
-                    ScorecardsSheet.Cells["B11"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C11"].Value = "Statistics for only the \"snappiest\" range where decode times are 500ms and under.";
-                    ScorecardsSheet.Cells["C11"].Style.Font.Bold = true;
-
-                    //prints sample name
-                    ScorecardsSheet.Cells["C13"].Value = TLog.BarcodeSampleName;
-                    ScorecardsSheet.Cells["C13"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C13"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C13"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    ScorecardsSheet.Cells["C13"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#FFF2CC"));
-
-                    //prints scanner name
-                    ScorecardsSheet.Cells["C14"].Value = TLog.ScannerMake + "_" + TLog.ScannerName;
-                    ScorecardsSheet.Cells["C14"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C14"].Style.Border.Top.Style = ExcelBorderStyle.Thick;
-                    ScorecardsSheet.Cells["C14"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-                    ScorecardsSheet.Cells["C14"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C14"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    ScorecardsSheet.Cells["C14"].Style.Fill.BackgroundColor.SetColor(System.Drawing.ColorTranslator.FromHtml("#DDEBF7"));
-
-                    //worksheet styling
-                    var TotalRangeTag = ScorecardsSheet.Cells["A15:A21"];
-                    TotalRangeTag.Merge = true;
-                    TotalRangeTag.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    TotalRangeTag.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                    ScorecardsSheet.Cells["A15"].Value = "Total Range";
-                    ScorecardsSheet.Cells["A15"].Style.TextRotation = 45;
-
-                    ScorecardsSheet.Column(1).Width = 14;
-                    ScorecardsSheet.Column(2).Width = 30;
-                    ScorecardsSheet.Column(3).Width = 35;
-
-                    ScorecardsSheet.Cells["C15:C28"].Style.Numberformat.Format = "0.00";
-
-                    var SnappyRangeTag = ScorecardsSheet.Cells["A22:A28"];
-                    SnappyRangeTag.Merge = true;
-                    SnappyRangeTag.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    SnappyRangeTag.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                    ScorecardsSheet.Cells["A22"].Value = "Snappy Range";
-                    ScorecardsSheet.Cells["A22"].Style.TextRotation = 45;
-
-                    //total range results
-                    ScorecardsSheet.Cells["B15"].Value = "Minimum Distance (In):";
-                    ScorecardsSheet.Cells["B15"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C15"].Value = CalculateClosestRange(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C15"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C15"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B16"].Value = "Maximum Distance (In):";
-                    ScorecardsSheet.Cells["B16"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C16"].Value = CalculateFarthestRange(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C16"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C16"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B17"].Value = "Decode Range (In):";
-                    ScorecardsSheet.Cells["B17"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C17"].Value = CalculateDecodeRange(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C17"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C17"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B18"].Value = "Total Average (MS):";
-                    ScorecardsSheet.Cells["B18"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C18"].Value = CalculateAverageDecodeTime(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C18"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C18"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    //commented out because average 90% was no longer needed
-                    /*
-                    ScorecardsSheet.Cells["B"].Value = "Total Average (90%) (MS):";
-                    ScorecardsSheet.Cells["B"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C"].Value = CalculateNinetyPercentAverageDecodeTime(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-                    */
-
-                    ScorecardsSheet.Cells["B19"].Value = "Standard Deviation (MS):";
-                    ScorecardsSheet.Cells["B19"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C19"].Value = CalculateStandardDeviationDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C19"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C19"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B20"].Value = "Highest Decode Time (MS)";
-                    ScorecardsSheet.Cells["B20"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C20"].Value = CalculateHighestDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C20"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C20"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B21"].Value = "Lowest Decode Time (MS):";
-                    ScorecardsSheet.Cells["B21"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C21"].Value = CalculateLowestDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C21"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C21"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    //styling for total range results
-                    var TotalRangeResults = ScorecardsSheet.Cells["A15:C21"];
-                    TotalRangeResults.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    TotalRangeResults.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#F2F2F2"));
-
-                    //snappy range results
-                    ScorecardsSheet.Cells["B22"].Value = "Snappy Minimum Distance (In):";
-                    ScorecardsSheet.Cells["B22"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C22"].Value = CalculateClosestRange(TLog.SnappyData);
-                    ScorecardsSheet.Cells["C22"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C22"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B23"].Value = "Snappy Maximum Distance (In):";
-                    ScorecardsSheet.Cells["B23"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C23"].Value = CalculateFarthestRange(TLog.SnappyData);
-                    ScorecardsSheet.Cells["C23"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C23"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B24"].Value = "Snappy Decode Range (In):";
-                    ScorecardsSheet.Cells["B24"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C24"].Value = CalculateDecodeRange(TLog.SnappyData);
-                    ScorecardsSheet.Cells["C24"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C24"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B25"].Value = "Snappy Total Average (MS):";
-                    ScorecardsSheet.Cells["B25"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C25"].Value = CalculateAverageDecodeTime(TLog.SnappyData);
-                    ScorecardsSheet.Cells["C25"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C25"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    //commented out because average 90% was no longer needed
-                    /*
-                    ScorecardsSheet.Cells["B"].Value = "Snappy Total Average (90%) (MS):";
-                    ScorecardsSheet.Cells["B"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["B"].Value = CalculateNinetyPercentAverageDecodeTime(TLog.SummaryGraphData);
-                    ScorecardsSheet.Cells["C"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-                    */
-
-                    ScorecardsSheet.Cells["B26"].Value = "Snappy Standard Deviation (MS):";
-                    ScorecardsSheet.Cells["B26"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C26"].Value = CalculateStandardDeviationDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C26"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C26"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B27"].Value = "Snappy Highest Decode Time (MS)";
-                    ScorecardsSheet.Cells["B27"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C27"].Value = CalculateHighestDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C27"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C27"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    ScorecardsSheet.Cells["B28"].Value = "Lowest Decode Time (MS):";
-                    ScorecardsSheet.Cells["B28"].Style.Font.Bold = true;
-                    ScorecardsSheet.Cells["C28"].Value = CalculateLowestDecodeTime(TLog.DecodeTimes);
-                    ScorecardsSheet.Cells["C28"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    ScorecardsSheet.Cells["C28"].Style.Border.Right.Style = ExcelBorderStyle.Thick;
-
-                    //styling for snappy range results
-                    var SnappyRangeResults = ScorecardsSheet.Cells["A22:C28"];
-                    SnappyRangeResults.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    SnappyRangeResults.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9D9D9"));
-
-                    //ScorecardsSheet.Column(1).Width = 14;
-                    //ScorecardsSheet.Column(2).Width = 30;
-                    //ScorecardsSheet.Column(3).Width = 35;
-
-                    //ScorecardsSheet.Cells["C15:C28"].Style.Numberformat.Format = "0.00";
+                        //saves the file to the desktop
+                        string SavePath = Path.Combine(SaveFolder, "Compiled Result_" + DateTime.Now.ToString("yyyyMMddHHmmssffff") + ".xlsx");
+                        var FileInfo = new System.IO.FileInfo(SavePath);
+                        excelPackage.SaveAs(FileInfo);
+                    }
                 }
                 catch (Exception)
                 {
-                    ErrorMessageTextBox.Text = "Error Printing Out Scorecard Data In The Spreadsheet. Did You Select A Proper Log File?";
-                }
 
-                //Saves the file
-                try
-                {
-                    var FileInfo = new System.IO.FileInfo("Compiled Result_" + TLog.ScannerName + "_" + TLog.BarcodeSampleName + "_" + DateTime.Now.ToString("yyyyMMddHHmmssffff") + ".xlsx");
-                    excelPackage.SaveAs(FileInfo);
-                }
-                catch (Exception)
-                {
-                    ErrorMessageTextBox.Text = "Error Saving Excell Spreadsheet.";
+                    ErrorMessageTextBox.Text = "There was an error compiling these logs together. Did you select valid log files?";
                 }
             }
+        }
+        #endregion
+
+        #region Excel_Helper_Functions
+        private void PopulateRawResultsSheet(TargetLog log, ExcelPackage sheet)
+        {
+            //wip for 3.0
+        }
+        #endregion
+
+        #region Math_Helper_Functions
+        /// <summary>
+        /// Seperates the single string contaning all of the log files into an array 
+        /// </summary>
+        /// <param name="LogPathsString"></param>
+        /// <returns></returns>
+        private string[] CreateLogFilePathsArray(string LogPathsString)
+        {
+            string[] LogPathsArray = LogPathsString.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            return LogPathsArray;
         }
 
         /// <summary>
@@ -854,6 +863,7 @@ namespace Hakbal
             return TotalAverageDecodeTime;
         }
 
+        /*Commenting out becasue this feature is no longer needed
         /// <summary>
         /// Calculates the average decode time from the first 90% of all decode times in a log
         /// </summary>
@@ -865,7 +875,7 @@ namespace Hakbal
             NinetyPercentAverageDecodeTime = CalculateAverageDecodeTime(FloatArray) * 0.90f;
 
             return NinetyPercentAverageDecodeTime;
-        }
+        }*/
 
         /// <summary>
         /// Calculates the standard deviation decode time from all decodes in a log
@@ -1043,5 +1053,6 @@ namespace Hakbal
                 return FullPath;
             }
         }
+        #endregion
     }
 }
