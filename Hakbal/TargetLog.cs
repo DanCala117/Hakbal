@@ -16,6 +16,7 @@ namespace Hakbal
         public string ScannerMake;
         public string ScannerSerialNumber;
         public string BarcodeSampleName;
+        public string ScorecardGroupNumber;
         public string LogFilePath;
         public float[,] SummaryGraphData;
         public float[,] SnappyData;
@@ -40,6 +41,7 @@ namespace Hakbal
             ScannerMake = "blank";
             ScannerSerialNumber = "blank";
             BarcodeSampleName = "blank";
+            ScorecardGroupNumber = "0";
             LogFilePath = "blank";
             SummaryGraphData = new float[0, 0];
             SnappyData = new float[0, 0];
@@ -63,7 +65,7 @@ namespace Hakbal
         public override string ToString()
         {
             //only want to return basic info for the data set list box
-            return "Log: " + ScannerMake + ", " + ScannerName + ", " + BarcodeSampleName;
+            return "Make: " + ScannerMake + ", Scanner: " + ScannerName + ", Sample: " + BarcodeSampleName + ", Group: " + ScorecardGroupNumber;
         }
     }
 }
