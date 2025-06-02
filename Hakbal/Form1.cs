@@ -248,19 +248,31 @@ namespace Hakbal
                         //RawResultsSheet.Cells["B5"].Value = GetFileName(LogFilePathTextBox.Text.ToString()); //TODO FIX THIS LINE!!!!!!!!!!!!!!!!!!!!!!!!!
                         RawResultsSheet.Cells["B5"].Value = GetFileName(log.LogFilePath.ToString());
 
-                        RawResultsSheet.Cells["B6"].Value = "Distance (In)";
+                        RawResultsSheet.Cells["B6"].Value = "Distance (in)";
                         RawResultsSheet.Cells["B6"].Style.Font.Bold = true;
                         RawResultsSheet.Cells["B6"].AutoFitColumns();
 
-                        RawResultsSheet.Cells["C6"].Value = "Decode Times (MS)";
+                        RawResultsSheet.Cells["C6"].Value = "Decode Times (ms)";
                         RawResultsSheet.Cells["C6"].Style.Font.Bold = true;
 
-                        RawResultsSheet.Cells["M6"].Value = "Average (MS)";
+                        RawResultsSheet.Cells["M6"].Value = "Average (ms)";
                         RawResultsSheet.Cells["M6"].Style.Font.Bold = true;
                         RawResultsSheet.Cells["M6"].AutoFitColumns();
 
-                        RawResultsSheet.Cells["B6:M6"].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                        RawResultsSheet.Cells["B6:M6"].Style.Fill.BackgroundColor.SetColor(Color.Gray);
+                        RawResultsSheet.Cells["N6"].Value = "STDEV (ms)";
+                        RawResultsSheet.Cells["N6"].Style.Font.Bold = true;
+                        RawResultsSheet.Cells["N6"].AutoFitColumns();
+
+                        RawResultsSheet.Cells["O6"].Value = "Min (ms)";
+                        RawResultsSheet.Cells["O6"].Style.Font.Bold = true;
+                        RawResultsSheet.Cells["O6"].AutoFitColumns();
+
+                        RawResultsSheet.Cells["P6"].Value = "Max (ms)";
+                        RawResultsSheet.Cells["P6"].Style.Font.Bold = true;
+                        RawResultsSheet.Cells["P6"].AutoFitColumns();
+
+                        RawResultsSheet.Cells["B6:P6"].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        RawResultsSheet.Cells["B6:P6"].Style.Fill.BackgroundColor.SetColor(Color.Gray);
 
                         log.SummaryGraphData = GetDecodeTimesAndAverages(log.LogFilePath);
                         log.DecodeTimes = Flatten2DArray(GetDecodeTimesOnly(log.SummaryGraphData));
@@ -270,6 +282,7 @@ namespace Hakbal
                         int Rows = log.SummaryGraphData.GetLength(0);
                         int Cols = log.SummaryGraphData.GetLength(1);
 
+                        //prints out the table data from the log
                         for (int i = 0; i < Rows; i++)
                         {
                             for (int j = 0; j < Cols; j++)
@@ -280,11 +293,36 @@ namespace Hakbal
                             }
                         }
 
+                        //prints out STDEV + Min/Max decode times for each distance in the range
+                        int StartRow = 7;
+                        int StartCol = 14;
+                        int LastRow = RawResultsSheet.Dimension.End.Row;
+
+                        for (int row = StartRow; row <= LastRow; row++)
+                        {
+                            if (RawResultsSheet.Cells[row, 3].Value != null)
+                            {
+                                //STDEV of each row in range
+                                RawResultsSheet.Cells[row, StartCol].Formula = $"STDEV(C{row}:L{row})";
+                                RawResultsSheet.Cells[row, StartCol].Style.Numberformat.Format = "0.00";
+
+                                //Min of each row in range
+                                RawResultsSheet.Cells[row, StartCol + 1].CreateArrayFormula($"MIN(IF(C{row}:L{row}>0, C{row}:L{row}))");
+                                RawResultsSheet.Cells[row, StartCol + 1].Style.Numberformat.Format = "0.00";
+
+                                //Max of each row in range
+                                RawResultsSheet.Cells[row, StartCol + 2].CreateArrayFormula($"MAX(IF(C{row}:L{row}>0, C{row}:L{row}))");
+                                RawResultsSheet.Cells[row, StartCol + 2].Style.Numberformat.Format = "0.00";
+                            }
+                        }
+
+                        RawResultsSheet.Calculate();
+
                         //Formatting for the graph data
                         RawResultsSheet.Cells["B:B"].Style.Numberformat.Format = "0.00";
                         RawResultsSheet.Cells["M:M"].Style.Numberformat.Format = "0.00";
 
-                        //
+                        //Creates the line graph using data from log
                         var LineGraph = RawResultsSheet.Drawings.AddChart("Results", OfficeOpenXml.Drawing.Chart.eChartType.LineMarkersStacked);
 
                         //From CurrentRow, From Col - To CurrentRow, To Col
@@ -296,7 +334,7 @@ namespace Hakbal
                         LineGraph.XAxis.Title.Text = "Distance (In)";
                         LineGraph.YAxis.Title.Text = "Decode Time (MS)";
                         LineGraph.XAxis.MajorUnit = .1;
-                        LineGraph.SetPosition(4, 10, 13, 10);
+                        LineGraph.SetPosition(4, 10, 16, 10);
                         LineGraph.SetSize(1000, 600);
                     }
                 }
@@ -2356,8 +2394,10 @@ namespace Hakbal
             int Rows = StringArray.GetLength(0);
             int Cols = StringArray.GetLength(1);
 
+            //new float array that is the same size as the string array
             float[,] FloatArray = new float[Rows, Cols];
 
+            //coppies the string array into the float array
             for (int i = 0; i < Rows; i++)
             {
                 for (int j = 0; j < Cols; j++)
@@ -2374,6 +2414,37 @@ namespace Hakbal
             }
 
             return FloatArray;
+        }
+
+        /// <summary>
+        /// Wipes the last row of the array if the last col of the last row is 0.
+        /// This means it could not calculate an average, so it is not a good end range.
+        /// </summary>
+        /// <param name="FloatArray"></param>
+        /// <returns></returns>
+        private float[,] WipeBadRanges(float[,] FloatArray)
+        {
+            int Rows = FloatArray.GetLength(0);
+            int Cols = FloatArray.GetLength(1);
+
+            //new array with new size
+            float[,] WipedArray = new float[Rows - 1, Cols];
+
+            //check origional array to see if the last column in the last row is zero
+            if (FloatArray[Rows - 1, Cols -1] == 0)
+            {
+                //copy good data from original array to wiped array
+                for (int i = 0; i < Rows; i++)
+                {
+                    for (int j =0; j < Cols; j++)
+                    {
+                        WipedArray[i, j] = FloatArray[i, j];
+                    }
+                }
+            }
+
+            //return new array
+            return WipedArray;
         }
 
         /// <summary>
@@ -2403,16 +2474,29 @@ namespace Hakbal
             int Rows2 = BiggerFloatArray.GetLength(0);
             int Cols2 = BiggerFloatArray.GetLength(1) - 1;
 
+            
+
             for (int i = 0; i < Rows2; i++)
             {
                 float DistanceSum = 0;
 
+                float NumberOfDecodesInRow = 0;
+
                 for (int j = 1; j < Cols2 + 1; j++)
                 {
                     DistanceSum += BiggerFloatArray[i, j];
+
+                    //checks for number of missed decodes as to get a correct count of good decode attempts
+                    if (BiggerFloatArray[i, j] != 0.0f)
+                    {
+                        NumberOfDecodesInRow++;
+                    }
                 }
 
-                float DistanceAverage = DistanceSum / 10;
+                //float DistanceAverage = DistanceSum / 10;
+                float DistanceAverage = DistanceSum / NumberOfDecodesInRow;
+
+                NumberOfDecodesInRow = 0;
 
                 BiggerFloatArray[i, Cols2] = DistanceAverage;
             }
@@ -2563,9 +2647,13 @@ namespace Hakbal
             }
             else
             {
-                int Rows = FloatArray.GetLength(0);
+                /*int Rows = FloatArray.GetLength(0);
 
-                FarthestRange = FloatArray[Rows - 2, 0];
+                FarthestRange = FloatArray[Rows - 2, 0];*/
+
+                int LastRowIndex = FloatArray.GetLength(0) - 1;
+
+                FarthestRange = FloatArray[LastRowIndex, 0];
             }
 
             return FarthestRange;
